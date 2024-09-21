@@ -1,0 +1,116 @@
+= Portable local development environment
+:toclevels: 3
+:numbered!:
+:sectanchors:
+:sectlinks:
+:docinfo: shared
+:linkattrs:
+:tip-caption: 💡
+:note-caption: ℹ️
+:important-caption: ❗
+:source-highlighter: highlightjs
+
+This dockerfile creates a local build & development environment for working with C++, Go, Java, JavaScript/TypeScript
+and/or Rust projects.
+
+This image is intended to be built once and the used interactively to work on other projects. The access to project
+files is intended to be done primarily through volumes (shared folders) between the host system and the image. This
+image does not include IDEs - these should be ran natively on the host operating system.
+
+Note that with all these toolchains in the container, the image is enormous - do *not* use it as a base image to
+distribute your applications.
+
+The idea to create and share this image arose from the frustration with the typical Windows-based development
+environments where some languages require users to jump through hoops to get the basic functionality to work. Some
+languages included in this image have decent-to-very-good developer setup experience, but they were added anyway for
+convenience of having all the tools in one spot.
+
+Solutions such as https://www.vagrantup.com[Vagrant] or https://nixos.org/[Nix] can be used to achieve similar
+results, but a plain container seems to require the least amount of setup.
+
+== Building
+
+Use this command:
+
+[source,shell]
+----
+[host$] docker build  .  -f LocalDevEnv.dockerfile  -t local-dev-env:latest
+----
+
+Note that it is often a good idea to replace the tag `latest` with the current date to minimize any accidental tool
+breakage when upgrading and/or experimenting.
+
+== Usage
+
+This image is intended to be used interactively, with an expectation that the source code of your application will be
+mounted via volumes.
+
+The typical usage of this image would be:
+
+[source,shell]
+----
+[host$] docker run -it --rm  -v /path/to/your/project/files:/build  local-dev-env:latest
+[container$] pwd
+[container$] ls -lah /build  /dotfiles  /home/builder
+[container$] gcc --version
+[container$] clang-16 --version
+[container$] cmake --version
+[container$] mvn --version
+[container$] cargo --version
+----
+
+Note that cache directories like `$HOME/.m2` can be mounted in the container image as well - doing so will decrease
+ephemeral storage usage and speed up the build.
+
+=== Notes for Windows hosts
+
+NOTE: The MinGW shell distributed with https://git-scm.com/[Git for Windows] performs path mangling. It can be
+disabled by setting the `MSYS_NO_PATHCONV=1` environment variable, but it is usually more convenient to run the
+`docker` command with volume mounts from a standard `cmd.exe` shell.
+
+Recent versions of Windows are pretty memory-hungry, especially with corporate software running in the background. It
+is recommended to fine-tune WSL2 settings before using docker containers for building applications - the easiest way
+to do it is by adding `.wslconfig` file in your home directory and restarting WSL (`wsl --shutdown` etc.).
+
+Here's an example of the `C:\Users\YOURUSERNAME\.wslconfig`:
+
+[source,ini]
+----
+# Docs: https://learn.microsoft.com/en-us/windows/wsl/wsl-config
+
+[wsl2]
+swap=0
+
+## You can customize WSL2 further through these two:
+# processors=6
+# memory=8GB
+
+[experimental]
+autoMemoryReclaim=gradual
+sparseVhd=true
+----
+
+Also, to save you a click:
+
+* The docker volume mounting syntax on Windows hosts is:
++
+[source,shell]
+----
+[host cmd.exe$] docker run -it --rm  -v D:\path\to\your\project\files:/build  local-dev-env:latest
+----
++
+* The `^` character can be used to continue the command into the next line:
++
+[source,shell]
+----
+[host cmd.exe$] docker run -it --rm  ^
+                       -v D:\path\to\your\project\files:/build  ^
+                       local-dev-env:latest
+----
+
+== License
+
+MIT
+
+
+// eof
