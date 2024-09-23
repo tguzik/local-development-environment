@@ -49,9 +49,9 @@ The typical usage of this image would be:
 
 [source,shell]
 ----
-[host$] docker run -it --rm  -v /path/to/your/project/files:/build  local-dev-env:latest
+[host$] docker run -it --rm  -v /path/to/your/project/files:/media/  local-dev-env:latest
 [container$] pwd
-[container$] ls -lah /build  /dotfiles  /home/builder
+[container$] ls -lah  /home/builder  /media
 [container$] gcc --version
 [container$] clang-16 --version
 [container$] cmake --version
@@ -96,15 +96,28 @@ Also, to save you a click:
 +
 [source,shell]
 ----
-[host cmd.exe$] docker run -it --rm  -v D:\path\to\your\project\files:/build  local-dev-env:latest
+[host cmd.exe$] docker run -it --rm  -v D:\path\to\your\project\files:/media  local-dev-env:latest
 ----
 +
-* The `^` character can be used to continue the command into the next line:
+* The `:ro` at the end of the volume mount argument will make the files read only:
 +
 [source,shell]
 ----
-[host cmd.exe$] docker run -it --rm  ^
-                       -v D:\path\to\your\project\files:/build  ^
+[host cmd.exe$] docker run -it --rm  -v C:\Users\YOURUSERNAME\.gnupg:/home/builder/.gnupg:ro  local-dev-env:latest
+----
++
+* The `^` character can be used to continue the command into the next line, similarly to how the `\` character
+functions in Bash:
++
+[source,shell]
+----
+[host cmd.exe$] docker run ^
+                       -it --rm  ^
+                       -v C:\Users\YOURUSERNAME\.gitconfig:/home/builder/.gitconfig:ro  ^
+                       -v C:\Users\YOURUSERNAME\.gnupg\:/home/builder/.gnupg/:ro  ^
+                       -v C:\Users\YOURUSERNAME\.ssh\:/home/builder/.ssh/:ro  ^
+                       -v C:\Users\YOURUSERNAME\.m2\:/home/builder/.m2/  ^
+                       -v D:\path\to\your\project\files\:/media/  ^
                        local-dev-env:latest
 ----
 

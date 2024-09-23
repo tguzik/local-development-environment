@@ -30,12 +30,6 @@ RUN useradd  --uid 1000  --create-home  --shell /bin/bash  builder
 
 
 #
-# Create directories intended to be used as volume mountpoints
-RUN mkdir  /build  /dotfiles  && \
-    chown -R builder:builder  /build  /dotfiles
-
-
-#
 # Execute the rest of the steps from the runtime user's account
 USER builder
 
