@@ -55,16 +55,11 @@ RUN source /home/builder/.sdkman/bin/sdkman-init.sh  && \
     sdk flush all  && \
     sdk offline enable
 
-ENV JAVA_HOME="/home/builder/.sdkman/candidates/java/current/"
-ENV PATH="/home/builder/.sdkman/candidates/java/current/bin:/home/builder/.sdkman/candidates/maven/current/bin/:$PATH"
-
 
 #
 # Install Rust toolchain
 RUN curl --proto '=https' --tlsv1.2 -sSf "https://sh.rustup.rs" |  \
     bash -s --   --default-toolchain stable  --no-modify-path  -y
-
-ENV PATH="/home/builder/.cargo/bin:$PATH"
 
 
 #
@@ -74,13 +69,24 @@ RUN mkdir -p  /home/builder/.golang  && \
     tar -xvzf  /tmp/golang.tar.gz  --strip-components 1  -C  /home/builder/.golang/  && \
     rm  /tmp/golang.tar.gz
 
-ENV PATH="/home/builder/.golang/bin:$PATH"
+
+#
+# Switch to the default user and their home directory as the default working directory
+USER builder
+WORKDIR /home/builder
 
 
 #
-# Finish up
-USER builder
-WORKDIR /home/builder
+# Update the environment variables and save the end result to .bashrc, so that sub-shells (e.g. those started by
+# tmux) would use these values as well.
+#
+# Also, when the image is rebuilt, the process will start from the first ENV directive, no matter if further cache
+# layers could be reused or not.
+ENV JAVA_HOME="/home/builder/.sdkman/candidates/java/current/"
+ENV PATH="/home/builder/.golang/bin:/home/builder/.cargo/bin:/home/builder/.sdkman/candidates/maven/current/bin/:${JAVA_HOME}/bin:$PATH"
+
+RUN echo "export JAVA_HOME=\"${JAVA_HOME}\"" >> /home/builder/.bashrc  && \
+    echo "export PATH=\"${PATH}\"" >> /home/builder/.bashrc
 
 CMD ["/bin/bash"]
 
