@@ -17,7 +17,7 @@ SHELL ["/bin/bash", "-c"]
 #
 # NOTE: Don't use the 'RUN <<END' syntax as it doesn't stop when one of the commands fails.
 RUN apt update  && \
-    apt install -y  ssh  gpg  git  tmux  procps  curl  wget  zip  unzip vim  nano  \
+    apt install -y  ssh  gpg  git  tmux  procps  curl  wget  zip  unzip  vim  nano  \
                     build-essential  autoconf  make  cmake  gcc  g++  libtool  gdb  clang-tools-16  ccache  valgrind  \
                     python3  \
                     nodejs  npm  && \
@@ -26,7 +26,7 @@ RUN apt update  && \
 
 #
 # Create user account for the normal use of this image
-RUN useradd  --uid 1000  --create-home  builder
+RUN useradd  --uid 1000  --create-home  --shell /bin/bash  builder
 
 
 #
