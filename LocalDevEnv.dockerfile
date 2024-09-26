@@ -5,10 +5,6 @@ FROM debian:latest
 WORKDIR /tmp
 USER root
 
-# The parent image uses dash shell by default, while some of the software we install expect bash. The main difference
-# relevant for building this dockerfile is that dash does not offer the 'source' built-in.
-SHELL ["/bin/bash", "-c"]
-
 
 #
 # Install software needed for development, compilation and the general interactive use of this container.
@@ -36,24 +32,21 @@ USER builder
 
 #
 # Install Java toolchain using https://sdkman.io
-# Note that we're installing Temurin distribution of JDK: https://adoptium.net/temurin/releases/
+# More specifically, we're installing the Temurin OpenJDK distribution: https://adoptium.net/temurin/releases/
 #
 # SDKMan's CDN can get overloaded every now and then, so we'll strategically use multiple cache layers to make it
 # less frustrating to resume the local docker builds.
+#
+# NOTE: The parent image defaults to the 'dash' shell, which does not support the 'source' built-in. In addition, the
+# 'SHELL' Dockerfile directive is not available under Podman, so we have to work around that too.
 RUN curl --proto '=https' --tlsv1.2 -sSf "https://get.sdkman.io?rcupdate=false" |  \
     bash
 
-RUN source /home/builder/.sdkman/bin/sdkman-init.sh  && \
-    sdk install java 21.0.4-tem  && \
-    sdk flush tmp
+RUN /bin/bash -c "source /home/builder/.sdkman/bin/sdkman-init.sh  &&  sdk install java 21.0.4-tem  &&  sdk flush tmp"
 
-RUN source /home/builder/.sdkman/bin/sdkman-init.sh  && \
-    sdk install maven 3.9.9  && \
-    sdk flush tmp
+RUN /bin/bash -c "source /home/builder/.sdkman/bin/sdkman-init.sh  &&  sdk install maven 3.9.9  &&  sdk flush tmp"
 
-RUN source /home/builder/.sdkman/bin/sdkman-init.sh  && \
-    sdk flush all  && \
-    sdk offline enable
+RUN /bin/bash -c "source /home/builder/.sdkman/bin/sdkman-init.sh  &&  sdk flush all  &&  sdk offline enable"
 
 
 #
