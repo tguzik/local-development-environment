@@ -15,8 +15,7 @@ USER root
 RUN apt update  && \
     apt install -y  ssh  gpg  git  tmux  procps  curl  wget  zip  unzip  vim  nano  \
                     build-essential  autoconf  make  cmake  gcc  g++  libtool  gdb  clang-tools-16  ccache  valgrind  \
-                    python3  \
-                    nodejs  npm  && \
+                    python3  && \
     apt clean
 
 
@@ -39,28 +38,36 @@ USER builder
 #
 # NOTE: The parent image defaults to the 'dash' shell, which does not support the 'source' built-in. In addition, the
 # 'SHELL' Dockerfile directive is not available under Podman, so we have to work around that too.
-RUN curl --proto '=https' --tlsv1.2 -sSf "https://get.sdkman.io?rcupdate=false" |  \
-    bash
+RUN curl --proto '=https' --tlsv1.2 -sSf "https://get.sdkman.io?rcupdate=false" | bash
 
-RUN /bin/bash -c "source /home/builder/.sdkman/bin/sdkman-init.sh  &&  sdk install java 21.0.4-tem  &&  sdk flush tmp"
+RUN bash -c "source /home/builder/.sdkman/bin/sdkman-init.sh  &&  sdk install java 21.0.4-tem  &&  sdk flush tmp"
 
-RUN /bin/bash -c "source /home/builder/.sdkman/bin/sdkman-init.sh  &&  sdk install maven 3.9.9  &&  sdk flush tmp"
+RUN bash -c "source /home/builder/.sdkman/bin/sdkman-init.sh  &&  sdk install maven 3.9.9  &&  sdk flush tmp"
 
-RUN /bin/bash -c "source /home/builder/.sdkman/bin/sdkman-init.sh  &&  sdk flush all  &&  sdk offline enable"
+RUN bash -c "source /home/builder/.sdkman/bin/sdkman-init.sh  &&  sdk flush all  &&  sdk offline enable"
+
+#
+# Install NodeJS toolchain using https://github.com/nvm-sh/nvm
+# The main argument for using this tool is giving the developer the ability to switch between different versions of
+# Node, depending on particular project.
+# Note that in order to work around issues with cache layers we have to delay the 'ENV' directives until the very end
+# of the build.
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+RUN bash -c "export NVM_DIR='$HOME/.nvm'  &&  source /home/builder/.nvm/nvm.sh  &&  nvm install 20 --default --save && nvm cache clear"
 
 
 #
 # Install Rust toolchain
-RUN curl --proto '=https' --tlsv1.2 -sSf "https://sh.rustup.rs" |  \
-    bash -s --   --default-toolchain stable  --no-modify-path  -y
+RUN curl --proto '=https' --tlsv1.2 -sSf "https://sh.rustup.rs" | bash -s --  --default-toolchain stable  -y
 
 
 #
 # Install Go toolchain
 RUN mkdir -p  /home/builder/.golang  && \
     curl --proto '=https' --tlsv1.2 -sSf "https://dl.google.com/go/go1.23.1.linux-amd64.tar.gz" -o /tmp/golang.tar.gz  && \
-    tar -xvzf  /tmp/golang.tar.gz  --strip-components 1  -C  /home/builder/.golang/  && \
+    tar -xzf  /tmp/golang.tar.gz  --strip-components 1  -C  /home/builder/.golang/  && \
     rm  /tmp/golang.tar.gz
+
 
 
 #
@@ -73,13 +80,17 @@ WORKDIR /home/builder
 # Update the environment variables and save the end result to .bashrc, so that sub-shells (e.g. those started by
 # tmux) would use these values as well.
 #
-# Also, when the image is rebuilt, the process will start from the first ENV directive, no matter if further cache
-# layers could be reused or not.
+# Also, when the image is rebuilt, the build process under Docker will start from the first ENV directive, no matter
+# if further cache layers could be reused or not.
+ENV NVM_DIR="/home/builder/.nvm"
 ENV JAVA_HOME="/home/builder/.sdkman/candidates/java/current/"
 ENV PATH="/home/builder/.golang/bin:/home/builder/.cargo/bin:/home/builder/.sdkman/candidates/maven/current/bin/:${JAVA_HOME}/bin:$PATH"
 
-RUN echo "export JAVA_HOME=\"${JAVA_HOME}\"" >> /home/builder/.bashrc  && \
-    echo "export PATH=\"${PATH}\"" >> /home/builder/.bashrc
+RUN echo "export NVM_DIR=\"${NVM_DIR}\"" >> /home/builder/.bashrc  && \
+    echo "export JAVA_HOME=\"${JAVA_HOME}\"" >> /home/builder/.bashrc  && \
+    echo "export PATH=\"${PATH}\"" >> /home/builder/.bashrc  && \
+    echo "source /home/builder/.sdkman/bin/sdkman-init.sh" >> /home/builder/.bashrc  && \
+    echo "nvm use default --silent" >> /home/builder/.bashrc
 
 CMD ["/bin/bash"]
 
